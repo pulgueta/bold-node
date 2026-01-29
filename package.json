@@ -1,0 +1,21 @@
+{
+  "name": "@pulgueta/bold",
+  "description": "Node.js Bold SDK",
+  "version": "0.0.0",
+  "author": "Andrés Rodríguez",
+  "license": "MIT",
+  "main": "",
+  "scripts": {
+    "build": "tsup"
+  },
+  "keywords": [
+    "bold",
+    "bold-node",
+    "payments"
+  ],
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@10.28.2"
+}
