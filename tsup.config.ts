@@ -9,5 +9,6 @@ export default defineConfig({
   platform: "node",
   treeshake: true,
   splitting: true,
-  minifySyntax: true
+  minifySyntax: true,
+  dts: true
 });
