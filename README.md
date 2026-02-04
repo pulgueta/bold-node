@@ -521,4 +521,4 @@ MIT © Andrés Rodríguez
 
 - [GitHub Repository](https://github.com/pulgueta/bold-node)
 - [npm Package](https://www.npmjs.com/package/@pulgueta/bold)
-- [Bold API Documentation](https://bold.co/developers)
+- [Bold API Documentation](https://developers.bold.co)
