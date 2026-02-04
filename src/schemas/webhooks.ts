@@ -1,40 +1,37 @@
-import { z } from "zod";
+import { enum as enumZod, number, object, string, array } from "zod";
+import type { output } from "zod";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Webhook Notification Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const WebhookEventTypeSchema = z.enum([
+export const WebhookEventTypeSchema = enumZod([
   "SALE_APPROVED",
   "SALE_REJECTED",
   "VOID_APPROVED",
   "VOID_REJECTED"
 ]);
 
-export type WebhookEventType = z.infer<typeof WebhookEventTypeSchema>;
+export type WebhookEventType = output<typeof WebhookEventTypeSchema>;
 
-export const TaxTypeSchema = z.enum(["VAT", "CONSUMPTION"]);
+export const TaxTypeSchema = enumZod(["VAT", "CONSUMPTION"]);
 
-export type TaxType = z.infer<typeof TaxTypeSchema>;
+export type TaxType = output<typeof TaxTypeSchema>;
 
-export const WebhookTaxSchema = z.object({
-  base: z.number(),
+export const WebhookTaxSchema = object({
+  base: number(),
   type: TaxTypeSchema,
-  value: z.number()
+  value: number()
 });
 
-export type WebhookTax = z.infer<typeof WebhookTaxSchema>;
+export type WebhookTax = output<typeof WebhookTaxSchema>;
 
-export const WebhookAmountSchema = z.object({
-  currency: z.string().optional(),
-  total: z.number(),
-  taxes: z.array(WebhookTaxSchema).optional(),
-  tip: z.number().optional()
+export const WebhookAmountSchema = object({
+  currency: string().optional(),
+  total: number(),
+  taxes: array(WebhookTaxSchema).optional(),
+  tip: number().optional()
 });
 
-export type WebhookAmount = z.infer<typeof WebhookAmountSchema>;
+export type WebhookAmount = output<typeof WebhookAmountSchema>;
 
-export const CardBrandSchema = z.enum([
+export const CardBrandSchema = enumZod([
   "VISA",
   "VISA_ELECTRON",
   "MASTERCARD",
@@ -46,33 +43,33 @@ export const CardBrandSchema = z.enum([
   "TUYA",
   "SODEXO",
   "OLIMPICA",
-  "UNKOWN"
+  "UNKNOWN"
 ]);
 
-export type CardBrand = z.infer<typeof CardBrandSchema>;
+export type CardBrand = output<typeof CardBrandSchema>;
 
-export const CaptureModeSchema = z.enum(["CHIP", "CONTACTLESS_CHIP"]);
+export const CaptureModeSchema = enumZod(["CHIP", "CONTACTLESS_CHIP"]);
 
-export type CaptureMode = z.infer<typeof CaptureModeSchema>;
+export type CaptureMode = output<typeof CaptureModeSchema>;
 
-export const CardTypeSchema = z.enum(["DEBIT", "CREDIT"]);
+export const CardTypeSchema = enumZod(["DEBIT", "CREDIT"]);
 
-export type CardType = z.infer<typeof CardTypeSchema>;
+export type CardType = output<typeof CardTypeSchema>;
 
-export const WebhookCardSchema = z.object({
+export const WebhookCardSchema = object({
   capture_mode: CaptureModeSchema.optional(),
   brand: CardBrandSchema.optional(),
   franchise: CardBrandSchema.optional(), // Alternative field name in some responses
-  cardholder_name: z.string().optional(),
-  terminal_id: z.string().optional(),
-  masked_pan: z.string().optional(),
-  installments: z.number().optional(),
+  cardholder_name: string().optional(),
+  terminal_id: string().optional(),
+  masked_pan: string().optional(),
+  installments: number().optional(),
   card_type: CardTypeSchema.optional()
 });
 
-export type WebhookCard = z.infer<typeof WebhookCardSchema>;
+export type WebhookCard = output<typeof WebhookCardSchema>;
 
-export const PaymentMethodTypeSchema = z.enum([
+export const PaymentMethodTypeSchema = enumZod([
   "CARD",
   "CARD_WEB",
   "SOFT_POS",
@@ -81,67 +78,57 @@ export const PaymentMethodTypeSchema = z.enum([
   "PSE"
 ]);
 
-export type PaymentMethodType = z.infer<typeof PaymentMethodTypeSchema>;
+export type PaymentMethodType = output<typeof PaymentMethodTypeSchema>;
 
-export const IntegrationTypeSchema = z.enum([
+export const IntegrationTypeSchema = enumZod([
   "POS",
   "SOFT_POS",
   "API_INTEGRATIONS",
   "LINK"
 ]);
 
-export type IntegrationType = z.infer<typeof IntegrationTypeSchema>;
+export type IntegrationType = output<typeof IntegrationTypeSchema>;
 
-export const WebhookMetadataSchema = z
-  .object({
-    reference: z.string().optional()
-  })
-  .passthrough();
+export const WebhookMetadataSchema = object({
+  reference: string().optional()
+}).loose();
 
-export type WebhookMetadata = z.infer<typeof WebhookMetadataSchema>;
+export type WebhookMetadata = output<typeof WebhookMetadataSchema>;
 
-export const WebhookDataSchema = z
-  .object({
-    payment_id: z.string(),
-    merchant_id: z.string(),
-    created_at: z.string(),
-    amount: WebhookAmountSchema,
-    user_id: z.string().optional(),
-    metadata: WebhookMetadataSchema.optional(),
-    bold_code: z.string().optional(),
-    payer_email: z.string().optional(),
-    payment_method: PaymentMethodTypeSchema.optional(),
-    card: WebhookCardSchema.optional(),
-    approval_number: z.string().optional(),
-    integration: IntegrationTypeSchema.optional()
-  })
-  .passthrough();
+export const WebhookDataSchema = object({
+  payment_id: string(),
+  merchant_id: string(),
+  created_at: string(),
+  amount: WebhookAmountSchema,
+  user_id: string().optional(),
+  metadata: WebhookMetadataSchema.optional(),
+  bold_code: string().optional(),
+  payer_email: string().optional(),
+  payment_method: PaymentMethodTypeSchema.optional(),
+  card: WebhookCardSchema.optional(),
+  approval_number: string().optional(),
+  integration: IntegrationTypeSchema.optional()
+}).loose();
 
-export type WebhookData = z.infer<typeof WebhookDataSchema>;
+export type WebhookData = output<typeof WebhookDataSchema>;
 
-export const WebhookNotificationSchema = z
-  .object({
-    id: z.string(),
-    type: WebhookEventTypeSchema,
-    subject: z.string(),
-    source: z.string(),
-    spec_version: z.string(),
-    time: z.number(),
-    data: WebhookDataSchema,
-    datacontenttype: z.string()
-  })
-  .passthrough();
+export const WebhookNotificationSchema = object({
+  id: string(),
+  type: WebhookEventTypeSchema,
+  subject: string(),
+  source: string(),
+  spec_version: string(),
+  time: number(),
+  data: WebhookDataSchema,
+  datacontenttype: string()
+}).loose();
 
-export type WebhookNotification = z.infer<typeof WebhookNotificationSchema>;
+export type WebhookNotification = output<typeof WebhookNotificationSchema>;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Webhook Notifications Fallback API Response
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const WebhookNotificationsResponseSchema = z.object({
-  notifications: z.array(WebhookNotificationSchema)
+export const WebhookNotificationsResponseSchema = object({
+  notifications: array(WebhookNotificationSchema)
 });
 
-export type WebhookNotificationsResponse = z.infer<
+export type WebhookNotificationsResponse = output<
   typeof WebhookNotificationsResponseSchema
 >;

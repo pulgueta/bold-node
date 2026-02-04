@@ -1,16 +1,11 @@
-// OAuth
 export { OAuthTokenSchema } from "./oauth";
 export type { OAuthToken } from "./oauth";
 
-// Integrations
 export {
-  // Payment Methods
   PaymentMethodSchema,
   PaymentMethodsResponseSchema,
-  // Terminals
   TerminalSchema,
   BindedTerminalsResponseSchema,
-  // App Checkout
   DocumentTypeSchema,
   TaxSchema,
   PayerDocumentSchema,
@@ -20,13 +15,10 @@ export {
   AppCheckoutResponseSchema
 } from "./integrations";
 export type {
-  // Payment Methods
   PaymentMethod,
   PaymentMethodsResponse,
-  // Terminals
   Terminal,
   BindedTerminalsResponse,
-  // App Checkout
   DocumentType,
   Tax,
   PayerDocument,
@@ -36,7 +28,6 @@ export type {
   AppCheckoutResponse
 } from "./integrations";
 
-// Webhooks
 export {
   WebhookEventTypeSchema,
   TaxTypeSchema,
@@ -70,7 +61,6 @@ export type {
   WebhookNotificationsResponse
 } from "./webhooks";
 
-// Transaction
 export {
   PaymentStatusSchema,
   PaymentVoucherResponseSchema

@@ -1,13 +1,11 @@
-import { z } from "zod";
+import { object, string, number } from "zod";
+import type { output } from "zod";
 
-/**
- * OAuth token response schema.
- */
-export const OAuthTokenSchema = z.object({
-  access_token: z.string(),
-  token_type: z.string(),
-  expires_in: z.number().optional(),
-  scope: z.string().optional()
+export const OAuthTokenSchema = object({
+  access_token: string(),
+  token_type: string(),
+  expires_in: number().optional(),
+  scope: string().optional()
 });
 
-export type OAuthToken = z.infer<typeof OAuthTokenSchema>;
+export type OAuthToken = output<typeof OAuthTokenSchema>;
