@@ -18,8 +18,14 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    }
+    },
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
   "type": "module",
   "scripts": {
     "build": "tsup",
