@@ -1,8 +1,11 @@
 {
   "name": "@pulgueta/bold",
   "description": "Node.js Bold SDK",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "author": "Andrés Rodríguez",
+  "publishConfig": {
+    "access": "public"
+  },
   "homepage": "https://github.com/pulgueta/bold-node",
   "repository": {
     "type": "git",
