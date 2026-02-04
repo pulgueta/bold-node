@@ -13,9 +13,9 @@ bun add @pulgueta/bold zod
 ```typescript
 import { Bold } from "@pulgueta/bold";
 
-const bold = new Bold({
-  identityKey: process.env.BOLD_IDENTITY_KEY!,
-  secretKey: process.env.BOLD_SECRET_KEY, // Optional, for webhook verification
+export const bold = new Bold({
+  identityKey: process.env.BOLD_IDENTITY_KEY,
+  secretKey: process.env.BOLD_SECRET_KEY,
   environment: "sandbox", // or "production"
 });
 
