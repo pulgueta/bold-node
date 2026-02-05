@@ -1,7 +1,7 @@
 {
   "name": "@pulgueta/bold",
   "description": "Node.js Bold SDK",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Andrés Rodríguez",
   "publishConfig": {
     "access": "public"
