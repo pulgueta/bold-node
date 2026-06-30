@@ -1,5 +1,5 @@
-import { object, string, number } from "zod";
 import type { output } from "zod";
+import { number, object, string } from "zod";
 
 export const OAuthTokenSchema = object({
   access_token: string(),
