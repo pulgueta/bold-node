@@ -45,12 +45,15 @@ export interface AbortedError {
   readonly message: string;
 }
 
-export type BoldError = { kind: Kind } & (
-  | NetworkError
-  | HttpError
-  | InvalidResponseError
-  | ApiError
-  | ConfigError
-  | TimeoutError
-  | AbortedError
-);
+/**
+ * A discriminated union on `kind` so `error.kind === "http"` narrows to the
+ * matching shape (e.g. `error.status`).
+ */
+export type BoldError =
+  | ({ kind: "network" } & NetworkError)
+  | ({ kind: "http" } & HttpError)
+  | ({ kind: "invalid_response" } & InvalidResponseError)
+  | ({ kind: "api_error" } & ApiError)
+  | ({ kind: "config" } & ConfigError)
+  | ({ kind: "timeout" } & TimeoutError)
+  | ({ kind: "aborted" } & AbortedError);
