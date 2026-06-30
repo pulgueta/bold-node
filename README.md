@@ -1,524 +1,245 @@
 # Bold Node.js SDK
 
-Implement Bold in your Node.js applications.
+[![npm](https://img.shields.io/npm/v/@pulgueta/bold.svg)](https://www.npmjs.com/package/@pulgueta/bold)
 
-## Installation
+ESM Node.js SDK for the [Bold](https://bold.co) payments API (Colombia). Covers
+**App Integrations (datáfono/POS)**, the **Online Payments API** (cards, PSE,
+Nequi, Botón Bancolombia, QR Bre‑B), **payment links**, **transaction status**,
+and **webhooks** — plus thin **framework adapters** for Next.js, TanStack Start,
+Express, and Hono.
+
+- Result‑tuple API (`[error, data]`) — nothing throws.
+- Runtime response validation with `zod`.
+- Per‑surface credentials, timeouts, retries, idempotency keys, and `AbortSignal`.
 
 ```bash
-bun add @pulgueta/bold zod
+npm i @pulgueta/bold zod
+# pnpm add @pulgueta/bold zod · bun add @pulgueta/bold zod
 ```
 
-## Quick Start
+## Credentials
 
-```typescript
+Each Bold integration surface has its **own** identity + secret key pair in the
+dashboard (panel.bold.co › Integraciones › Llaves de integración) — they are
+**different values**. Provide a primary key and override per surface as needed.
+See [`.env.example`](./.env.example).
+
+```ts
 import { Bold } from "@pulgueta/bold";
 
 export const bold = new Bold({
-  identityKey: process.env.BOLD_IDENTITY_KEY,
-  secretKey: process.env.BOLD_SECRET_KEY,
-  environment: "sandbox", // or "production"
-});
+  // Default identity/secret used by every surface without an override:
+  identityKey: process.env.BOLD_API_INTEGRATIONS_IDENTITY_KEY!,
+  secretKey: process.env.BOLD_API_INTEGRATIONS_SECRET_KEY,
+  environment: "sandbox", // or "production" — chosen by the key, not the URL
 
-// Create a payment
-const [error, payment] = await bold.payments.create({
-  amount: {
-    currency: "COP",
-    total_amount: 50000,
-    taxes: [],
-    tip_amount: 0,
+  // Optional per‑surface overrides:
+  paymentButton: {
+    identityKey: process.env.BOLD_PAYMENT_BUTTON_IDENTITY_KEY,
+    secretKey: process.env.BOLD_PAYMENT_BUTTON_SECRET_KEY
   },
-  payment_method: "POS",
-  terminal_model: "P400",
-  terminal_serial: "12345678",
-  reference: "ORDER-123",
-  user_email: "customer@example.com",
-});
-
-if (error) {
-  console.error("Payment failed:", error);
-} else {
-  console.log("Payment created:", payment.payload.integration_id);
-}
-```
-
-## Configuration
-
-### SDK Options
-
-```typescript
-interface BoldOptions {
-  // Required: Your Bold API identity key
-  identityKey: string;
-
-  // Optional: Secret key for webhook verification
-  secretKey?: string;
-
-  // Optional: OAuth client credentials
-  clientId?: string;
-  clientSecret?: string;
-
-  // Optional: Environment (default: "sandbox")
-  environment?: "sandbox" | "production";
-
-  // Optional: Request timeout in milliseconds (default: 30000)
-  timeoutMs?: number;
-
-  // Optional: Number of retry attempts (default: 0)
-  retries?: number;
-
-  // Optional: Delay between retries in milliseconds (default: 1000)
-  retryDelayMs?: number;
-}
-```
-
-### Example Configuration
-
-```typescript
-const bold = new Bold({
-  identityKey: process.env.BOLD_IDENTITY_KEY!,
-  secretKey: process.env.BOLD_SECRET_KEY,
-  clientId: process.env.BOLD_CLIENT_ID,
-  clientSecret: process.env.BOLD_CLIENT_SECRET,
-  environment: "production",
-  timeoutMs: 15000,
-  retries: 3,
-  retryDelayMs: 2000,
+  online: {
+    identityKey: process.env.BOLD_ONLINE_IDENTITY_KEY,
+    secretKey: process.env.BOLD_ONLINE_SECRET_KEY
+  }
 });
 ```
 
-## API Reference
+| Resource | Surface | Key used |
+| --- | --- | --- |
+| `bold.payments`, `bold.terminals` | App Integrations (datáfono) | `apiIntegrations` |
+| `bold.links` | API Link de pagos | `paymentButton` |
+| `bold.transactions` | Voucher status | `paymentButton` |
+| `bold.online` | Online Payments API (BETA) | `online` |
+| `bold.webhooks` | Webhooks | primary (`secretKey`) |
+| `bold.oauth` | OAuth client credentials | `clientId`/`clientSecret` |
 
-### OAuth
+## Result tuples
 
-Get an OAuth access token using client credentials.
+Every async method returns `[error, null]` or `[null, data]`:
 
-```typescript
-const [error, token] = await bold.oauth.getToken();
-
-if (error) {
-  console.error("Failed to get token:", error);
-} else {
-  console.log("Access token:", token.access_token);
-  console.log("Expires in:", token.expires_in);
-}
-```
-
-### Payments
-
-#### Create Payment
-
-Create a payment through the API Integrations (App Checkout).
-
-```typescript
-import type { AppCheckoutRequest } from "@pulgueta/bold";
-
-const paymentRequest: AppCheckoutRequest = {
-  amount: {
-    currency: "COP",
-    total_amount: 100000,
-    taxes: [
-      {
-        type: "VAT",
-        base: 84034,
-        value: 15966,
-      },
-    ],
-    tip_amount: 5000,
-  },
-  payment_method: "NEQUI",
-  terminal_model: "SMARTPHONE",
-  terminal_serial: "123456789",
-  reference: "ORDER-001",
-  user_email: "customer@example.com",
-  description: "Product purchase",
-  payer: {
-    email: "customer@example.com",
-    phone_number: "+573001234567",
-    document: {
-      document_type: "CEDULA",
-      document_number: "1234567890",
-    },
-  },
-};
-
-const [error, payment] = await bold.payments.create(paymentRequest, {
-  // Optional request config
-  idempotencyKey: "unique-request-id",
-  timeoutMs: 15000,
-});
-```
-
-#### Get Payment Methods
-
-Get available payment methods for the merchant.
-
-```typescript
+```ts
 const [error, methods] = await bold.payments.getMethods();
-
 if (error) {
-  console.error("Failed to get payment methods:", error);
-} else {
-  console.log("Available methods:", methods.payload.payment_methods);
-}
-```
-
-#### Get Payment Status
-
-Get the payment voucher / transaction status for a sale.
-
-```typescript
-const [error, status] = await bold.payments.getStatus("sale-id-123");
-
-if (error) {
-  console.error("Failed to get payment status:", error);
-} else {
-  console.log("Payment status:", status.payment_status);
-  console.log("Transaction ID:", status.transaction_id);
-}
-```
-
-### Terminals
-
-#### List Terminals
-
-Get available payment terminals (dataphones) for the merchant.
-
-```typescript
-const [error, terminals] = await bold.terminals.list();
-
-if (error) {
-  console.error("Failed to get terminals:", error);
-} else {
-  for (const terminal of terminals.payload.available_terminals) {
-    console.log(`${terminal.name}: ${terminal.terminal_serial}`);
-  }
-}
-```
-
-### Webhooks
-
-#### Verify Webhook Signature
-
-Verify the authenticity of a webhook payload using HMAC-SHA256.
-
-```typescript
-import express from "express";
-
-const app = express();
-
-app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
-  const signature = req.headers["x-bold-signature"] as string;
-
-  // Verify the webhook signature
-  const result = bold.webhooks.verify(req.body, signature);
-
-  if (!result.valid) {
-    console.error("Invalid webhook signature:", result.error);
-    return res.status(400).json({ error: result.error });
-  }
-
-  // Parse the webhook payload
-  const notification = bold.webhooks.parse<WebhookNotification>(
-    req.body.toString()
-  );
-
-  if (!notification) {
-    return res.status(400).json({ error: "Invalid payload" });
-  }
-
-  // Process the webhook
-  console.log("Webhook received:", notification.type);
-  console.log("Payment ID:", notification.data.payment_id);
-
-  res.status(200).json({ received: true });
-});
-```
-
-#### Generate Webhook Signature (for testing)
-
-Generate a webhook signature for testing purposes.
-
-```typescript
-const payload = JSON.stringify({
-  id: "evt_123",
-  type: "SALE_APPROVED",
-  data: {
-    payment_id: "pay_123",
-    merchant_id: "merchant_123",
-    amount: { total: 50000, currency: "COP" },
-  },
-});
-
-const signature = bold.webhooks.generateSignature(payload);
-
-// Use in tests
-const response = await fetch("http://localhost:3000/webhook", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "x-bold-signature": signature,
-  },
-  body: payload,
-});
-```
-
-#### Get Webhook Notifications
-
-Get webhook notifications for a payment (fallback service).
-
-```typescript
-// By payment ID
-const [error, notifications] = await bold.webhooks.getNotifications("pay_123");
-
-// By external reference
-const [error2, notifications2] = await bold.webhooks.getNotifications(
-  "ORDER-123",
-  { isExternalReference: true }
-);
-
-if (error) {
-  console.error("Failed to get notifications:", error);
-} else {
-  for (const notification of notifications.notifications) {
-    console.log(`${notification.type} at ${notification.time}`);
-  }
-}
-```
-
-## Error Handling
-
-The SDK uses a **Result Tuple** pattern for explicit error handling. All async methods return `[error, null]` on failure or `[null, result]` on success.
-
-### Result Tuple Pattern
-
-```typescript
-import type { BoldError } from "@pulgueta/bold";
-
-const [error, payment] = await bold.payments.create(paymentRequest);
-
-if (error) {
-  // Handle error based on type
   switch (error.kind) {
-    case "network":
-      console.error("Network error:", error.message);
-      break;
-    case "http":
-      console.error(`HTTP ${error.status}: ${error.statusText}`);
-      break;
-    case "invalid_response":
-      console.error("Invalid response:", error.issues);
-      break;
-    case "api_error":
-      console.error("API error:", error.errors);
-      break;
-    case "config":
-      console.error("Configuration error:", error.message);
-      break;
-    case "timeout":
-      console.error(`Request timeout after ${error.timeoutMs}ms`);
-      break;
-    case "aborted":
-      console.error("Request aborted:", error.message);
-      break;
+    case "http": console.error(error.status, error.body); break;       // non‑2xx
+    case "invalid_response": console.error(error.issues); break;        // failed zod
+    case "api_error": console.error(error.errors); break;               // 2xx with errors[]
+    case "timeout": console.error(error.timeoutMs); break;
+    default: console.error(error);                                      // network|config|aborted
   }
   return;
 }
-
-// Success - payment is guaranteed to be non-null
-console.log("Payment ID:", payment.payload.integration_id);
+console.log(methods.payload.payment_methods);
 ```
 
-### Error Types
+`BoldError` is a discriminated union on `kind`, so `error.kind === "http"`
+narrows to `error.status`.
 
-```typescript
-type BoldError = { kind: Kind } & (
-  | NetworkError // Fetch failed (network issues, timeout, abort)
-  | HttpError // Non-2xx HTTP status
-  | InvalidResponseError // Response failed Zod validation
-  | ApiError // Bold API returned errors
-  | ConfigError // SDK misconfiguration
-  | TimeoutError // Request timeout
-  | AbortedError
-); // Request aborted
-```
+## Online Payments API (cards, PSE, Nequi, Bancolombia, QR Bre‑B)
 
-## TypeScript Support
+> BETA — requires the "API Pagos en Línea" key, activated separately in the dashboard.
 
-The SDK is fully typed with TypeScript and exports all schemas and types.
-
-### Using Types
-
-```typescript
-import type {
-  AppCheckoutRequest,
-  AppCheckoutResponse,
-  PaymentStatus,
-  WebhookNotification,
-  WebhookEventType,
-  BoldError,
-} from "@pulgueta/bold";
-
-const payment: AppCheckoutRequest = {
-  amount: {
-    currency: "COP",
-    total_amount: 50000,
-    taxes: [],
-    tip_amount: 0,
-  },
-  payment_method: "POS",
-  terminal_model: "P400",
-  terminal_serial: "12345678",
-  reference: "ORDER-123",
-  user_email: "customer@example.com",
-};
-```
-
-### Using Schemas (Runtime Validation)
-
-```typescript
-import { AppCheckoutRequestSchema } from "@pulgueta/bold";
-
-const result = AppCheckoutRequestSchema.safeParse(unknownData);
-
-if (result.success) {
-  const payment = result.data;
-  // payment is now typed as AppCheckoutRequest
-} else {
-  console.error("Validation errors:", result.error.issues);
-}
-```
-
-## Advanced Features
-
-### Request Configuration
-
-All methods accept optional request configuration:
-
-```typescript
-interface RequestConfig {
-  // Custom timeout for this request
-  timeoutMs?: number;
-
-  // AbortSignal for request cancellation
-  signal?: AbortSignal;
-
-  // Number of retry attempts
-  retries?: number;
-
-  // Delay between retries in milliseconds
-  retryDelayMs?: number;
-
-  // Idempotency key for safe retries (payments only)
-  idempotencyKey?: string;
-}
-```
-
-### Request Cancellation
-
-```typescript
-const controller = new AbortController();
-
-// Cancel request after 5 seconds
-setTimeout(() => controller.abort(), 5000);
-
-const [error, payment] = await bold.payments.create(paymentRequest, {
-  signal: controller.signal,
+```ts
+// 1) Create an intent
+const [, intent] = await bold.online.createIntent({
+  reference_id: "ORD-12345",
+  amount: { currency: "COP", total_amount: 100000, tip_amount: 0 },
+  callback_url: "https://shop.com/return" // required for PSE & Bancolombia
 });
 
-if (error?.kind === "aborted") {
-  console.log("Request was cancelled");
-}
-```
-
-### Idempotent Requests
-
-```typescript
-import { randomUUID } from "crypto";
-
-const idempotencyKey = randomUUID();
-
-// First attempt
-const [error1, payment1] = await bold.payments.create(paymentRequest, {
-  idempotencyKey,
+// 2) Execute the payment
+const [, attempt] = await bold.online.pay({
+  reference_id: "ORD-12345",
+  payer: { name: "Laura Gómez", document_type: "CEDULA", document_number: "1012345678" },
+  payment_method: {
+    name: "CREDIT_CARD",
+    card_number: "4111111111111111",
+    cardholder_name: "Laura Gomez",
+    expiration_month: 12,
+    expiration_year: 2035,
+    installments: 1,
+    cvc: "123"
+  }
 });
 
-// Retry with same key - will not create duplicate payment
-const [error2, payment2] = await bold.payments.create(paymentRequest, {
-  idempotencyKey,
+// 3) Handle 3DS / PSE / QR via attempt.next_actions, then confirm:
+const [, status] = await bold.online.getPayment("ORD-12345");
+```
+
+Also: `getIntent`, `updateIntent`, `listPseBanks`, `voidPayment`, `refund`,
+`getRefund`. Sandbox 3DS/fraud is triggered by special `total_amount` values
+(`555001` approve‑3DS, `555002` reject‑3DS, `555020` challenge, `555040`
+approve‑no‑3DS, `555042` reject‑fraud).
+
+## Payment links
+
+```ts
+const [, link] = await bold.links.create({
+  amount_type: "CLOSE", // or "OPEN" (buyer chooses the amount)
+  amount: { currency: "COP", total_amount: 50000, tip_amount: 0, taxes: [] },
+  description: "Order 12345",
+  payment_methods: ["CREDIT_CARD", "PSE", "NEQUI"]
+});
+// link.payment_link → "LNK_…", link.url → "https://checkout.bold.co/…"
+
+const [, methods] = await bold.links.getPaymentMethods(); // limits per method
+const [, detail] = await bold.links.get(link!.payment_link);
+```
+
+## App‑checkout (datáfono / POS)
+
+```ts
+const [, terminals] = await bold.terminals.list();
+const [, payment] = await bold.payments.create({
+  amount: { currency: "COP", total_amount: 50000, tip_amount: 0, taxes: [] },
+  payment_method: "POS", // "" shows the selector on the terminal
+  terminal_model: "N86",
+  terminal_serial: "N860W000000",
+  reference: "ORD-12345",
+  user_email: "seller@shop.com"
 });
 ```
 
-## Webhook Event Types
+## Transaction status
 
-```typescript
-type WebhookEventType =
-  | "SALE_APPROVED"
-  | "SALE_REJECTED"
-  | "VOID_APPROVED"
-  | "VOID_REJECTED";
+```ts
+const [error, voucher] = await bold.transactions.getStatus(saleId);
+// voucher.payment_status: NO_TRANSACTION_FOUND | PROCESSING | PENDING | APPROVED | REJECTED | FAILED | VOIDED
 ```
 
-## Payment Methods
+## Webhooks
 
-```typescript
-type PaymentMethod = "DAVIPLATA" | "NEQUI" | "PAY_BY_LINK" | "POS";
+Verify the `x-bold-signature` HMAC over the **raw** request body, then respond
+`200` within ~2s. Sandbox uses an empty secret key.
+
+```ts
+const result = bold.webhooks.verify(rawBody, signature); // { valid, error? }
+const event = bold.webhooks.parse(rawBody);
 ```
 
-## Payment Status
+### Framework adapters
 
-```typescript
-type PaymentStatus =
-  | "NO_TRANSACTION_FOUND"
-  | "PROCESSING"
-  | "PENDING"
-  | "APPROVED"
-  | "REJECTED"
-  | "FAILED"
-  | "VOIDED";
+Drop‑in handlers that read the raw body, verify, parse, dispatch, and map errors
+to status codes. Imported from subpaths (only `express`/`hono` pull a peer dep):
+
+```ts
+// Next.js — app/api/bold/webhook/route.ts
+import { createBoldWebhookRoute } from "@pulgueta/bold/next";
+export const POST = createBoldWebhookRoute(bold, {
+  onEvent: (event) => { /* event.type, event.data.payment_id */ }
+});
 ```
 
-## Document Types
+```ts
+// Hono
+import { boldWebhook } from "@pulgueta/bold/hono";
+app.post("/webhook/bold", boldWebhook(bold, { onEvent }));
+```
 
-```typescript
-type DocumentType =
-  | "CEDULA"
-  | "NIT"
-  | "CEDULA_EXTRANJERIA"
-  | "PEP"
-  | "PASAPORTE"
-  | "NUIP"
-  | "REGISTRO_CIVIL"
-  | "DOCUMENTO_EXTRANJERIA"
-  | "TARJETA_IDENTIDAD"
-  | "PPT";
+```ts
+// Express 5 — mount a raw parser so bytes match the signature
+import { boldWebhookHandler } from "@pulgueta/bold/express";
+app.post("/webhook/bold", express.raw({ type: () => true }), boldWebhookHandler(bold, { onEvent }));
+```
+
+```ts
+// TanStack Start
+import { createBoldWebhookHandler } from "@pulgueta/bold/tanstack";
+export const ServerRoute = createServerFileRoute().methods({
+  POST: createBoldWebhookHandler(bold, { onEvent })
+});
+```
+
+If a webhook is missed, query actively (use sparingly):
+
+```ts
+const [error, data] = await bold.webhooks.getNotifications(paymentId);
+```
+
+## Request options
+
+Every method accepts a final options argument:
+
+```ts
+await bold.online.createIntent(input, {
+  timeoutMs: 15000,
+  retries: 3,
+  retryDelayMs: 1000,
+  idempotencyKey: crypto.randomUUID(),
+  signal: controller.signal
+});
+```
+
+## TypeScript & schemas
+
+All request/response types and their Zod schemas are exported, e.g.
+`PaymentIntentRequest`/`PaymentIntentRequestSchema`, `CreateLinkRequest`,
+`AppCheckoutRequest`, `WebhookNotification`. Schemas are usable for your own
+runtime validation.
+
+## Skills
+
+This package ships [agent skills](https://agentskills.io) under `skills/`. Install
+them into your coding agent with [`skills-npm`](https://npmx.dev/package/skills-npm):
+
+```bash
+npm i -D skills-npm && npx skills-npm
 ```
 
 ## Development
 
-### Building
-
 ```bash
-pnpm install
-pnpm build
+pnpm build              # tsup → dist/
+pnpm typecheck          # tsc --noEmit
+pnpm test:unit          # deterministic unit tests
+pnpm test:integration   # live Bold sandbox (needs .env; surfaces self‑skip)
+pnpm sandbox            # runnable end‑to‑end check
 ```
 
-### Linting and Formatting
-
-```bash
-pnpm lint
-pnpm format
-```
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
+Releases are automated with semantic-release; `prepack` rebuilds `dist/` on every
+publish so the shipped code is always current.
 
 ## License
 
-MIT © Andrés Rodríguez
-
-## Links
-
-- [GitHub Repository](https://github.com/pulgueta/bold-node)
-- [npm Package](https://www.npmjs.com/package/@pulgueta/bold)
-- [Bold API Documentation](https://developers.bold.co)
+MIT © Andrés Rodríguez · [GitHub](https://github.com/pulgueta/bold-node) · [Bold docs](https://developers.bold.co)
