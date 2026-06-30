@@ -1,80 +1,47 @@
+// --- Client ---------------------------------------------------------------
+export { Bold } from "./bold";
 export type {
-  ResultTuple,
+  BoldCredential,
+  BoldEnvironment,
+  BoldOptions,
+  ResolvedCredential,
+  ResourceContext
+} from "./config";
+// --- Config / options -----------------------------------------------------
+export {
+  authHeaders,
+  BASE_URLS,
+  resolveCredential
+} from "./config";
+export type {
+  AbortedError,
+  ApiError,
   BoldError,
-  NetworkError,
+  ConfigError,
   HttpError,
   InvalidResponseError,
-  ApiError,
-  ConfigError,
-  TimeoutError,
-  AbortedError
+  Kind,
+  NetworkError,
+  ResultTuple,
+  TimeoutError
 } from "./errors";
-export type { BoldOptions } from "./bold";
 export type { RequestConfig } from "./http";
+// --- HTTP / errors --------------------------------------------------------
+export { hasApiErrors } from "./http";
+export { LinksResource } from "./resources/links";
+// --- Resource classes (for typing / advanced use) -------------------------
+export { OAuthResource } from "./resources/oauth";
+export { OnlineResource } from "./resources/online";
+export { PaymentsResource } from "./resources/payments";
+export { TerminalsResource } from "./resources/terminals";
+export { TransactionsResource } from "./resources/transactions";
+export { WebhooksResource } from "./resources/webhooks";
+// --- Schemas + inferred types ---------------------------------------------
+export * from "./schemas";
 export type { WebhookVerificationResult } from "./webhooks";
-export { Bold } from "./bold";
+// --- Webhook utilities ----------------------------------------------------
 export {
-  verifyWebhookSignature,
   generateWebhookSignature,
-  parseWebhookPayload
+  parseWebhookPayload,
+  verifyWebhookSignature
 } from "./webhooks";
-export {
-  OAuthTokenSchema,
-  PaymentMethodSchema,
-  PaymentMethodsResponseSchema,
-  TerminalSchema,
-  BindedTerminalsResponseSchema,
-  DocumentTypeSchema,
-  TaxSchema,
-  PayerDocumentSchema,
-  PayerSchema,
-  AmountSchema,
-  AppCheckoutRequestSchema,
-  AppCheckoutResponseSchema,
-  WebhookEventTypeSchema,
-  TaxTypeSchema,
-  WebhookTaxSchema,
-  WebhookAmountSchema,
-  CardBrandSchema,
-  CaptureModeSchema,
-  CardTypeSchema,
-  WebhookCardSchema,
-  PaymentMethodTypeSchema,
-  IntegrationTypeSchema,
-  WebhookMetadataSchema,
-  WebhookDataSchema,
-  WebhookNotificationSchema,
-  WebhookNotificationsResponseSchema,
-  PaymentStatusSchema,
-  PaymentVoucherResponseSchema
-} from "./schemas";
-export type {
-  OAuthToken,
-  PaymentMethod,
-  PaymentMethodsResponse,
-  Terminal,
-  BindedTerminalsResponse,
-  DocumentType,
-  Tax,
-  PayerDocument,
-  Payer,
-  Amount,
-  AppCheckoutRequest,
-  AppCheckoutResponse,
-  WebhookEventType,
-  TaxType,
-  WebhookTax,
-  WebhookAmount,
-  CardBrand,
-  CaptureMode,
-  CardType,
-  WebhookCard,
-  PaymentMethodType,
-  IntegrationType,
-  WebhookMetadata,
-  WebhookData,
-  WebhookNotification,
-  WebhookNotificationsResponse,
-  PaymentStatus,
-  PaymentVoucherResponse
-} from "./schemas";
