@@ -13,24 +13,17 @@ export interface RequestConfig {
   idempotencyKey?: string;
 }
 
-interface BaseRequestOptions<T> extends RequestConfig {
+interface RequestInput extends RequestConfig {
   url: string;
   method: "GET" | "POST" | "PUT" | "DELETE";
   headers?: Record<string, string>;
+  body?: unknown;
+  contentType?: "json" | "form";
+}
+
+interface JsonRequestOptions<T> extends RequestInput {
   schema: ZodType<T>;
 }
-
-interface JsonRequestOptions<T> extends BaseRequestOptions<T> {
-  body?: unknown;
-  contentType?: "json";
-}
-
-interface FormRequestOptions<T> extends BaseRequestOptions<T> {
-  body: URLSearchParams;
-  contentType: "form";
-}
-
-type RequestOptions<T> = JsonRequestOptions<T> | FormRequestOptions<T>;
 
 const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
 
@@ -73,13 +66,18 @@ function createTimeoutSignal(
   return { signal: controller.signal, cleanup };
 }
 
-async function executeRequest<T>(options: RequestOptions<T>) {
+/**
+ * Shared transport: handles timeout, exponential-backoff retries and network
+ * errors, returning the OK `Response` for the caller to read, or a `BoldError`
+ * tuple. Non-2xx responses become `http` errors (after reading the body).
+ */
+async function performRequest(options: RequestInput) {
   const {
     url,
     method,
     headers = {},
     body,
-    schema,
+    contentType = "json",
     timeoutMs = 30000,
     signal: externalSignal,
     retries = 0,
@@ -87,13 +85,13 @@ async function executeRequest<T>(options: RequestOptions<T>) {
     idempotencyKey
   } = options;
 
-  const contentType =
-    "contentType" in options && options.contentType === "form"
+  const contentTypeHeader =
+    contentType === "form"
       ? "application/x-www-form-urlencoded"
       : "application/json";
 
   const requestHeaders: Record<string, string> = {
-    "Content-Type": contentType,
+    "Content-Type": contentTypeHeader,
     Accept: "application/json",
     ...headers
   };
@@ -104,7 +102,7 @@ async function executeRequest<T>(options: RequestOptions<T>) {
 
   const requestBody =
     body !== undefined
-      ? contentType === "application/json"
+      ? contentType === "json"
         ? JSON.stringify(body)
         : (body as URLSearchParams).toString()
       : undefined;
@@ -155,44 +153,14 @@ async function executeRequest<T>(options: RequestOptions<T>) {
         ] as const;
       }
 
-      let raw: unknown;
-      try {
-        raw = await response.json();
-      } catch (cause) {
-        return [
-          {
-            kind: "network",
-            message: "Failed to parse JSON response",
-            cause
-          },
-          null
-        ] as const;
-      }
-
-      const result = schema.safeParse(raw);
-
-      if (!result.success) {
-        return [
-          {
-            kind: "invalid_response",
-            issues: result.error.issues,
-            raw
-          },
-          null
-        ] as const;
-      }
-
-      return [null, result.data] as const;
+      return [null, response] as const;
     } catch (cause) {
       cleanup();
 
       if (cause instanceof Error && cause.name === "AbortError") {
         if (externalSignal?.aborted) {
           return [
-            {
-              kind: "aborted",
-              message: "Request was cancelled"
-            },
+            { kind: "aborted", message: "Request was cancelled" },
             null
           ] as const;
         }
@@ -241,16 +209,104 @@ async function executeRequest<T>(options: RequestOptions<T>) {
   ] as const;
 }
 
+/** Perform a request and validate the JSON response body with a Zod schema. */
 export async function requestJson<const T>(
-  options: Omit<JsonRequestOptions<T>, "contentType">
+  options: Omit<JsonRequestOptions<T>, "contentType"> & {
+    contentType?: "json";
+  }
 ) {
-  return executeRequest<T>({ ...options, contentType: "json" });
+  const [error, response] = await performRequest({
+    ...options,
+    contentType: "json"
+  });
+
+  if (error) {
+    return [error, null] as const;
+  }
+
+  let raw: unknown;
+  try {
+    raw = await response.json();
+  } catch (cause) {
+    return [
+      { kind: "network", message: "Failed to parse JSON response", cause },
+      null
+    ] as const;
+  }
+
+  const result = options.schema.safeParse(raw);
+
+  if (!result.success) {
+    return [
+      { kind: "invalid_response", issues: result.error.issues, raw },
+      null
+    ] as const;
+  }
+
+  return [null, result.data] as const;
 }
 
+/** Perform a `application/x-www-form-urlencoded` request (used by OAuth). */
 export async function requestForm<const T>(
-  options: Omit<FormRequestOptions<T>, "contentType">
+  options: Omit<JsonRequestOptions<T>, "contentType"> & {
+    body: URLSearchParams;
+  }
 ) {
-  return executeRequest<T>({ ...options, contentType: "form" });
+  const [error, response] = await performRequest({
+    ...options,
+    contentType: "form"
+  });
+
+  if (error) {
+    return [error, null] as const;
+  }
+
+  let raw: unknown;
+  try {
+    raw = await response.json();
+  } catch (cause) {
+    return [
+      { kind: "network", message: "Failed to parse JSON response", cause },
+      null
+    ] as const;
+  }
+
+  const result = options.schema.safeParse(raw);
+
+  if (!result.success) {
+    return [
+      { kind: "invalid_response", issues: result.error.issues, raw },
+      null
+    ] as const;
+  }
+
+  return [null, result.data] as const;
+}
+
+/**
+ * Perform a request that returns no content (HTTP 204), e.g. void/refund.
+ * On success resolves to `[null, undefined]`.
+ */
+export async function requestNoContent(
+  options: Omit<RequestInput, "contentType"> & { contentType?: "json" }
+) {
+  const [error, response] = await performRequest({
+    ...options,
+    contentType: "json"
+  });
+
+  if (error) {
+    return [error, null] as const;
+  }
+
+  // Drain any body so the connection can be reused.
+  try {
+    await response.arrayBuffer();
+  } catch {
+    // ignore
+  }
+
+  return [null, undefined] as const;
 }
 
 export function hasApiErrors(response: { errors?: unknown[] }) {
