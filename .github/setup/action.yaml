@@ -5,9 +5,9 @@ runs:
   using: composite
   steps:
     - name: Install pnpm
+      # Version is read from the `packageManager` field in package.json,
+      # keeping CI in lockstep with local development.
       uses: pnpm/action-setup@v4
-      with:
-        version: 10.28.2
 
     - name: Use Node.js 24
       uses: actions/setup-node@v6
