@@ -1,7 +1,13 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: [
+    "./src/index.ts",
+    "./src/adapters/next.ts",
+    "./src/adapters/hono.ts",
+    "./src/adapters/express.ts",
+    "./src/adapters/tanstack.ts"
+  ],
   outDir: "dist",
   format: "esm",
   clean: true,
@@ -10,5 +16,6 @@ export default defineConfig({
   treeshake: true,
   splitting: true,
   minifySyntax: true,
-  dts: true
+  dts: true,
+  external: ["zod", "express", "hono"]
 });

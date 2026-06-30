@@ -1,7 +1,13 @@
 .DS_Store
 
 .env*
+!.env.example
 
 node_modules
 dist
+coverage
 .pnpm-debug.log*
+*.local
+
+# Local docs-crawl artifacts (not shipped)
+research/

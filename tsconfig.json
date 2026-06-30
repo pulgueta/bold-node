@@ -7,21 +7,18 @@
     "moduleDetection": "force",
     "moduleResolution": "bundler",
     "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noPropertyAccessFromIndexSignature": true,
-    "declaration": true,
-    "emitDeclarationOnly": true,
-    "rootDir": "src",
-    "outDir": "dist",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "noEmit": true,
+    "ignoreDeprecations": "6.0",
+    "types": ["node"]
   },
   "exclude": ["node_modules", "dist"],
-  "include": ["./src/**/*.ts", "release.config.mjs"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
 }
