@@ -1,27 +1,21 @@
-import {
-  object,
-  enum as enumZod,
-  boolean,
-  string,
-  number,
-  array,
-  unknown
-} from "zod";
 import type { output } from "zod";
+import { array, boolean, enum as enumZod, number, object, string } from "zod";
+import { envelopeNormalize } from "./common";
 
 export const PaymentMethodSchema = object({
-  name: enumZod(["DAVIPLATA", "NEQUI", "PAY_BY_LINK", "POS"]),
+  name: enumZod(["DAVIPLATA", "NEQUI", "PAY_BY_LINK", "POS", "PAY_BY_QR_BOLD"]),
   enabled: boolean()
 });
 
 export type PaymentMethod = output<typeof PaymentMethodSchema>;
 
-export const PaymentMethodsResponseSchema = object({
-  payload: object({
-    payment_methods: array(PaymentMethodSchema)
-  }),
-  errors: array(unknown())
-});
+export const PaymentMethodsPayloadSchema = object({
+  payment_methods: array(PaymentMethodSchema)
+}).loose();
+
+export const PaymentMethodsResponseSchema = envelopeNormalize(
+  PaymentMethodsPayloadSchema
+);
 
 export type PaymentMethodsResponse = output<
   typeof PaymentMethodsResponseSchema
@@ -36,12 +30,13 @@ export const TerminalSchema = object({
 
 export type Terminal = output<typeof TerminalSchema>;
 
-export const BindedTerminalsResponseSchema = object({
-  payload: object({
-    available_terminals: array(TerminalSchema)
-  }),
-  errors: array(unknown())
-});
+export const BindedTerminalsPayloadSchema = object({
+  available_terminals: array(TerminalSchema)
+}).loose();
+
+export const BindedTerminalsResponseSchema = envelopeNormalize(
+  BindedTerminalsPayloadSchema
+);
 
 export type BindedTerminalsResponse = output<
   typeof BindedTerminalsResponseSchema
@@ -96,7 +91,14 @@ export type Amount = output<typeof AmountSchema>;
 
 export const AppCheckoutRequestSchema = object({
   amount: AmountSchema,
-  payment_method: enumZod(["POS", "NEQUI", "DAVIPLATA", "PAY_BY_LINK"]),
+  payment_method: enumZod([
+    "POS",
+    "NEQUI",
+    "DAVIPLATA",
+    "PAY_BY_LINK",
+    "PAY_BY_QR_BOLD",
+    ""
+  ]),
   terminal_model: string(),
   terminal_serial: string(),
   reference: string(),
@@ -107,11 +109,12 @@ export const AppCheckoutRequestSchema = object({
 
 export type AppCheckoutRequest = output<typeof AppCheckoutRequestSchema>;
 
-export const AppCheckoutResponseSchema = object({
-  payload: object({
-    integration_id: string()
-  }),
-  errors: array(unknown())
-});
+export const AppCheckoutPayloadSchema = object({
+  integration_id: string()
+}).loose();
+
+export const AppCheckoutResponseSchema = envelopeNormalize(
+  AppCheckoutPayloadSchema
+);
 
 export type AppCheckoutResponse = output<typeof AppCheckoutResponseSchema>;

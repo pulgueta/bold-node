@@ -1,5 +1,5 @@
-import { enum as enumZod, number, object, string, array } from "zod";
 import type { output } from "zod";
+import { array, enum as enumZod, number, object, string } from "zod";
 
 export const WebhookEventTypeSchema = enumZod([
   "SALE_APPROVED",
@@ -43,7 +43,8 @@ export const CardBrandSchema = enumZod([
   "TUYA",
   "SODEXO",
   "OLIMPICA",
-  "UNKNOWN"
+  "UNKNOWN",
+  "UNKOWN"
 ]);
 
 export type CardBrand = output<typeof CardBrandSchema>;
@@ -75,7 +76,8 @@ export const PaymentMethodTypeSchema = enumZod([
   "SOFT_POS",
   "NEQUI",
   "BOTON_BANCOLOMBIA",
-  "PSE"
+  "PSE",
+  "QR"
 ]);
 
 export type PaymentMethodType = output<typeof PaymentMethodTypeSchema>;
@@ -84,7 +86,8 @@ export const IntegrationTypeSchema = enumZod([
   "POS",
   "SOFT_POS",
   "API_INTEGRATIONS",
-  "LINK"
+  "LINK",
+  "BOLD_TAP"
 ]);
 
 export type IntegrationType = output<typeof IntegrationTypeSchema>;
